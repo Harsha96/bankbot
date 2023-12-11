@@ -1,6 +1,6 @@
 const db = require("../models");
 const User = db.user; // Adjust this based on your actual model name
-
+const Transaction=db.transaction;
 module.exports = (app) => {
   var router = require("express").Router();
 
@@ -81,6 +81,63 @@ module.exports = (app) => {
       res.status(500).json({ error: "Internal Server Error" });
     }
   });
+  const generateRandomId = () => {
+    // Assuming you want a random string of length 8
+    const length = 8;
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let randomId = '';
+  
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * characters.length);
+      randomId += characters.charAt(randomIndex);
+    }
+  
+    return randomId;
+  }
+  
+  router.put("/:accountId", async (req, res) => {
+    try {
+      const userAccountId = req.params.accountId;
+      const { transactionType, accountBalance } = req.body;
+  
+      if (!transactionType || !accountBalance) {
+        return res.status(400).json({ error: "Transaction details are incomplete" });
+      }
+  
+      // Find the user based on the accountId
+      const user = await User.findOne({ accountId: userAccountId });
+  
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+  
+      // Update the account balance based on the transaction type
+      if (transactionType === "credit") {
+        user.accountBalance += parseFloat(accountBalance);
+      } else if (transactionType === "debit") {
+        user.accountBalance -= parseFloat(accountBalance);
+      } else {
+        return res.status(400).json({ error: "Invalid transaction type" });
+      }
+  
+      // Save the updated user
+      const updatedUser = await user.save();
+      const beneficiaryId = generateRandomId();
 
+      // Create a new transaction record
+      const newTransaction = await Transaction.create({
+        accountId: userAccountId,
+        transactionType: transactionType,
+        amount: parseFloat(accountBalance),
+        beneficiaryId: beneficiaryId,
+
+        // Add other transaction fields as needed
+      });
+      res.status(200).json({ user: updatedUser, transaction: newTransaction });
+    } catch (error) {
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
+  
   app.use("/api/users", router);
 };

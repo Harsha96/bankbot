@@ -26,7 +26,7 @@ module.exports = mongoose => {
         username: String,
         email: String,
         accountId:Number,
-        accountType:Number,
+        accountType:String,
         userAddress:String,
         accountBalance:Number
         // Add other fields based on your user details
